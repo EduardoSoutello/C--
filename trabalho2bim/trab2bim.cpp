@@ -6,8 +6,11 @@
 using namespace std;
 using namespace cv;
 
-vector<float>histograma, tempPA;
-int linha, coluna, x, h;
+vector<int>histograma(256,0);
+vector<float>tempPA(256,0);
+int linha, coluna, x;
+int h = 0;
+
 
 
 int main(int, char**) {
@@ -17,7 +20,9 @@ int main(int, char**) {
     //imshow("teste2", img2);
 
     Mat cinza(img.rows, img.cols, CV_8U);
-
+    int tamImag = (img.rows) * (img.cols);
+     
+    
 #pragma omp parallel for private(linha,coluna)
     for (linha = 0; linha < img.rows; linha++)
     {
@@ -29,46 +34,65 @@ int main(int, char**) {
                     img.at<Vec3b>(linha, coluna)[2]) / 3;       //VERMELHO[2]
         }
     }
-
+    imshow("teste cinza", cinza);
     int linha2, coluna2;
+
 #pragma omp parallel for private(linha2,coluna2)
         for (linha2 = 0; linha2 < img.rows; linha2++)//contagem de valores de pixels(vetor dp histograma)
         {
             for (coluna2 = 0; coluna2 < img.cols; coluna2++)
             {   //BGR0
-                histograma[cinza.at<uchar>(linha2, coluna2)];
-                h++;
-            }
+                histograma[cinza.at<uchar>(linha2, coluna2)] += 1;
+            }                           
         }
 #pragma omp parallel for
         for (int i = 0; i < 256; i++)//probabilidade acumuladas dos valores
         {
-            float temp2 = histograma[i] / (img.rows * img.cols);
-            float anterior = histograma[i-1];
-            if (i == 1)
+            float anterior;
+            float temp2 =float(histograma[i]);
+            temp2 = temp2 * 255 / tamImag;
+            if (i > 0)
             {
-                tempPA[i] = float(temp2);
-                tempPA[i] = int(tempPA[i] * 255);
+                anterior = histograma[i - 1];
+            }
+            if (i == 0)
+            {
+                if (temp2 > 255)
+                {
+                    tempPA[i] = 255;
+                }
+                tempPA[i] = float(temp2);    
             }
             else
             {
-                temp2 += anterior;
+                temp2 += anterior * 256 / tamImag;
+                if (temp2 > 255)
+                {
+                    tempPA[i] = 255;
+                }
                 tempPA[i] = float(temp2);
-                tempPA[i] = int(tempPA[i] * 255);
             }
         }
+
     int linha3, coluna3;
 #pragma omp parallel for private(linha3,coluna3)
-        for (linha3 = 0; linha3 < img.rows; linha3++)//verifica posição no histograma para novo valor da imagem
+        for (linha3 = 0; linha3 < img.rows; linha3++)//verifica posiÃ§Ã£o no histograma para novo valor da imagem
         {
             for (coluna3 = 0; coluna3 < img.cols; coluna3++)
             {   //BGR0
                 int temp = cinza.at<uchar>(linha3, coluna3);
-                cinza.at<uchar>(linha3, coluna3) = histograma[temp];
+                if (histograma[temp] > 255)         //
+                {                                   // tentar verificar overflow
+                    histograma[temp] = 255;         //
+                }                                   //
+                cinza.at<uchar>(linha3, coluna3) = int(histograma[temp]);
+                cout << histograma[coluna3] << "\n";
             }
         }
-    imshow("teste cinza", cinza);
+      
 
+    imshow("teste equalizado", cinza);
+    
     waitKey(0);
 }
 
