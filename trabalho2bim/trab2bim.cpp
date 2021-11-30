@@ -14,7 +14,7 @@ int h = 0;
 
 
 int main(int, char**) {
-    //Mat img = imread("../../../img01.png");
+    //Mat img = imread("../../../foto.jpg");
     Mat img = imread("../../../bender.png");
     imshow("teste", img);
     //imshow("teste2", img2);
@@ -45,15 +45,15 @@ int main(int, char**) {
                 histograma[cinza.at<uchar>(linha2, coluna2)] += 1;
             }                           
         }
-#pragma omp parallel for
+//#pragma omp parallel for 
         for (int i = 0; i < 256; i++)//probabilidade acumuladas dos valores
         {
             float anterior;
             float temp2 =float(histograma[i]);
-            temp2 = temp2 * 255 / tamImag;
+            temp2 = temp2 * 256 / float(tamImag);
             if (i > 0)
             {
-                anterior = histograma[i - 1];
+                anterior = tempPA[i-1];
             }
             if (i == 0)
             {
@@ -61,16 +61,17 @@ int main(int, char**) {
                 {
                     tempPA[i] = 255;
                 }
-                tempPA[i] = float(temp2);    
+                tempPA[i] = temp2;    
             }
             else
             {
-                temp2 += anterior * 256 / tamImag;
+                cout << i<< " " << temp2 << " " << anterior << endl;
+                temp2 += anterior;
                 if (temp2 > 255)
                 {
                     tempPA[i] = 255;
                 }
-                tempPA[i] = float(temp2);
+                tempPA[i] = temp2;
             }
         }
 
@@ -81,18 +82,12 @@ int main(int, char**) {
             for (coluna3 = 0; coluna3 < img.cols; coluna3++)
             {   //BGR0
                 int temp = cinza.at<uchar>(linha3, coluna3);
-                if (histograma[temp] > 255)         //
-                {                                   // tentar verificar overflow
-                    histograma[temp] = 255;         //
-                }                                   //
-                cinza.at<uchar>(linha3, coluna3) = int(histograma[temp]);
-                cout << histograma[coluna3] << "\n";
+                cinza.at<uchar>(linha3, coluna3) = tempPA[temp];
             }
         }
-      
-
+ 
+       
     imshow("teste equalizado", cinza);
     
     waitKey(0);
 }
-
